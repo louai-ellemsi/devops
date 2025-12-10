@@ -51,7 +51,13 @@ pipeline {
 
     stage('Docker push') {
       steps {
-        withCredentials([usernamePassword(credentialsId: "${DOCKER_CRED}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS")]) {
+        withCredentials([
+          usernamePassword(
+            credentialsId: "${DOCKER_CRED}",
+            usernameVariable: 'DH_USER',
+            passwordVariable: 'DH_PASS'
+          )
+        ]) {
           sh '''
             echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
             TAG=$(git rev-parse --short HEAD)
