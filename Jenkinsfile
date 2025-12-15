@@ -2,8 +2,8 @@ pipeline {
   agent any
 
   environment {
-    DOCKER_IMAGE = "oussema22/atelier-devops"
-    DOCKER_CRED  = "docker-hub-creds"
+    DOCKER_IMAGE = "louai011/devops"
+    DOCKER_CRED  = "creds"
   }
 
   stages {
@@ -29,16 +29,11 @@ pipeline {
       steps {
         sh 'mvn -B -DskipTests=false test'
       }
-      post {
-        always {
-          junit 'target/surefire-reports/*.xml'
-        }
-      }
-    }
+     
 
     stage('MVN SONARQUBE') {
       steps {
-        withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+        withCredentials([string(credentialsId: 'token', variable: 'SONAR_TOKEN')]) {
           sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN'
         }
       }
