@@ -29,7 +29,7 @@ pipeline {
       steps {
         sh 'mvn -B -DskipTests=false test'
       }
-     
+     }
 
     stage('MVN SONARQUBE') {
       steps {
