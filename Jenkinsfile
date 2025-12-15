@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'maven' // exact name from Global Tool Configuration
+    }
+
     environment {
         DOCKER_IMAGE = "louai011/devops"
         DOCKER_CRED  = "creds"
@@ -11,7 +15,9 @@ pipeline {
             steps {
                 checkout scm
                 script { 
-                    echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}" 
+                    // Get branch name reliably even in single-branch pipelines
+                    def branch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    echo "Branch: ${branch}"
                 }
             }
         }
