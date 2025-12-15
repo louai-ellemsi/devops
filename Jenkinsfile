@@ -29,7 +29,12 @@ pipeline {
       steps {
         sh 'mvn -B -DskipTests=false test'
       }
-    } // <-- closing Unit tests stage
+      post {
+        always {
+          junit 'target/surefire-reports/*.xml'
+        }
+      }
+    }
 
     stage('MVN SONARQUBE') {
       steps {
@@ -43,6 +48,7 @@ pipeline {
       steps {
         script {
           def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+
           sh "docker build -t ${DOCKER_IMAGE}:${tag} ."
           sh "docker tag ${DOCKER_IMAGE}:${tag} ${DOCKER_IMAGE}:latest"
         }
@@ -55,8 +61,10 @@ pipeline {
           sh '''
             echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
             TAG=$(git rev-parse --short HEAD)
+
             docker push ${DOCKER_IMAGE}:$TAG
             docker push ${DOCKER_IMAGE}:latest
+
             docker logout
           '''
         }
