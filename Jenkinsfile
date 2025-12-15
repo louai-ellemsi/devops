@@ -1,80 +1,81 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    DOCKER_IMAGE = "louai011/devops"
-    DOCKER_CRED  = "creds"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-        script { echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}" }
-      }
+    environment {
+        DOCKER_IMAGE = "louai011/devops"
+        DOCKER_CRED  = "creds"
     }
 
-    stage('Clean + Build Maven') {
-      steps {
-        sh 'mvn -B -DskipTests=false clean package'
-      }
-      post {
-        success {
-          archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script { 
+                    echo "Branch: ${env.BRANCH_NAME ?: 'unknown'}" 
+                }
+            }
         }
-      }
-    }
 
-    stage('Unit tests') {
-      steps {
-        sh 'mvn -B -DskipTests=false test'
-      }
-      post {
-        always {
-          junit 'target/surefire-reports/*.xml'
+        stage('Clean + Build Maven') {
+            steps {
+                sh 'mvn -B clean package'
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+                }
+            }
         }
-      }
-    }
 
-    stage('MVN SONARQUBE') {
-      steps {
-        withCredentials([string(credentialsId: 'token', variable: 'SONAR_TOKEN')]) {
-          sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN'
+        stage('Unit tests') {
+            steps {
+                sh 'mvn -B test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
         }
-      }
-    }
 
-    stage('Docker build') {
-      steps {
-        script {
-          def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-
-          sh "docker build -t ${DOCKER_IMAGE}:${tag} ."
-          sh "docker tag ${DOCKER_IMAGE}:${tag} ${DOCKER_IMAGE}:latest"
+        stage('MVN SONARQUBE') {
+            steps {
+                withCredentials([string(credentialsId: 'token', variable: 'SONAR_TOKEN')]) {
+                    sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN'
+                }
+            }
         }
-      }
-    }
 
-    stage('Docker push') {
-      steps {
-        withCredentials([usernamePassword(credentialsId: "${DOCKER_CRED}", usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
-          sh '''
-            echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-            TAG=$(git rev-parse --short HEAD)
-
-            docker push ${DOCKER_IMAGE}:$TAG
-            docker push ${DOCKER_IMAGE}:latest
-
-            docker logout
-          '''
+        stage('Docker build') {
+            steps {
+                script {
+                    def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    sh "docker build -t ${DOCKER_IMAGE}:${tag} ."
+                    sh "docker tag ${DOCKER_IMAGE}:${tag} ${DOCKER_IMAGE}:latest"
+                }
+            }
         }
-      }
-    }
-  }
 
-  post {
-    success { echo "Pipeline succeeded: ${DOCKER_IMAGE}" }
-    failure { echo "Pipeline failed" }
-  }
+        stage('Docker push') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: DOCKER_CRED, usernameVariable: 'DH_USER', passwordVariable: 'DH_PASS')]) {
+                    script {
+                        def tag = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                        sh """
+                            echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
+                            docker push ${DOCKER_IMAGE}:${tag}
+                            docker push ${DOCKER_IMAGE}:latest
+                            docker logout
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo "Pipeline succeeded: ${DOCKER_IMAGE}" }
+        failure { echo "Pipeline failed" }
+    }
 }
 
