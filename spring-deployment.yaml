@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: spring-app
-        image: oussema22/atelier-devops:latest
+        image: louai011/devops:latest
         ports:
         - containerPort: 8080
         envFrom:
